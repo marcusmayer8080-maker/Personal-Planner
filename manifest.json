@@ -1,0 +1,17 @@
+{
+  "name": "اقدامات مانده",
+  "short_name": "اقدامات",
+  "description": "پیگیری کارهای باقی‌مانده، اقدامات و تقویم پروژه‌ها",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf9f6",
+  "theme_color": "#a1471f",
+  "dir": "rtl",
+  "lang": "fa",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
