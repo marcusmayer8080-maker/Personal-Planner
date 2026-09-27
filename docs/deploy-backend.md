@@ -1,7 +1,38 @@
 # Deploying the backend
 
 The backend is a single PocketBase binary plus the migrations in `backend/pb_migrations/`.
-It stores everything in one SQLite database under `pb_data/`.
+It stores everything in one SQLite database under `pb_data/`. PocketBase also serves the
+built frontend from `pb_public/`, so app and API share one origin (`VITE_PB_URL=/`).
+
+## Current production server (Windows VPS, 185.110.191.60)
+
+`npm run deploy` runs the tests, builds, and installs into `C:\planner-prod`:
+
+```
+C:\planner-prod\
+  pocketbase.exe    server
+  pb_migrations\    schema + settings (applied on server start)
+  pb_public\        built frontend
+  pb_data\          database + daily backups (created on first start; never touched by deploy)
+```
+
+Production command (PocketBase binds 80/443 and obtains the Let's Encrypt certificate itself):
+
+```
+C:\planner-prod\pocketbase.exe serve planner.maheri.space --dir C:\planner-prod\pb_data --publicDir C:\planner-prod\pb_public --migrationsDir C:\planner-prod\pb_migrations
+```
+
+Environment variable `PLANNER_APP_URL=https://planner.maheri.space` should be set for the
+first start (used by the settings migration for the app URL in emails).
+
+**Still to do (needs an administrator):** point the DNS A record of `planner.maheri.space`
+at `185.110.191.60`, allow inbound TCP 80/443 for `pocketbase.exe`, run the command above
+as a background service that starts on boot, and create the dashboard superuser.
+
+After frontend-only changes, `npm run deploy` is enough — the running server serves the new
+files immediately. After adding a migration, restart the server.
+
+## Alternative: Linux VPS
 
 ## Where to host
 

@@ -43,7 +43,8 @@ sends. Any rule change must keep `npm run check:rules` passing.
 
 ## Deploy
 
-- Backend: see [docs/deploy-backend.md](docs/deploy-backend.md).
-- Frontend: `.github/workflows/deploy.yml` publishes `dist/` to GitHub Pages on push to
-  `master` (repo Settings → Pages → Source must be **GitHub Actions**). Alternatively serve
-  it from PocketBase on the same server (recommended for users in Iran; see the deploy doc).
+The app and API are served together by PocketBase on our own server (no GitHub Pages).
+`npm run deploy` tests, builds and installs everything into `C:\planner-prod`.
+Details: [docs/deploy-backend.md](docs/deploy-backend.md).
+
+GitHub Actions (`.github/workflows/ci.yml`) only runs tests + build on every push.
