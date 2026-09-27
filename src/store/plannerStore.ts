@@ -1,11 +1,14 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { plannerApi, subscribeAll, type RealtimeHandler } from '../data/plannerApi';
 import type { CalendarEvent, CategoryKey, Project, Task } from '../domain/types';
-import { todayYmd } from '../lib/dates';
 import { uid } from '../lib/id';
+import { pb } from '../lib/pb';
 
-// All data mutations go through this store. In phase 2 the actions become API calls
-// and the components that use them stay unchanged.
+// Server-backed planner data. Mutations are optimistic: the UI updates immediately and
+// the request runs in the background. If the server rejects it, that one change is rolled
+// back and an error is shown. Realtime events keep other tabs/devices in sync.
+
+type Status = 'idle' | 'loading' | 'ready' | 'error';
 
 interface PlannerData {
   projects: Project[];
@@ -13,7 +16,13 @@ interface PlannerData {
   events: CalendarEvent[];
 }
 
-interface PlannerActions {
+interface PlannerState extends PlannerData {
+  status: Status;
+  error: string | null;
+  start: () => Promise<void>;
+  stop: () => void;
+  dismissError: () => void;
+
   addTask: (category: CategoryKey, text: string, projectId?: string) => void;
   updateTask: (id: string, patch: Partial<Pick<Task, 'text' | 'done' | 'due'>>) => void;
   deleteTask: (id: string) => void;
@@ -25,60 +34,132 @@ interface PlannerActions {
   deleteEvent: (id: string) => void;
 }
 
+type Key = keyof PlannerData;
+type Item<K extends Key> = PlannerData[K][number];
+
+const EMPTY: PlannerData = { projects: [], tasks: [], events: [] };
+
+function upsert<T extends { id: string }>(list: T[], item: T): T[] {
+  const i = list.findIndex((x) => x.id === item.id);
+  if (i < 0) return [...list, item];
+  const next = list.slice();
+  next[i] = item;
+  return next;
+}
+
+function errorMessage(err: unknown) {
+  const status = (err as { status?: number })?.status;
+  if (status === 0) return 'ارتباط با سرور برقرار نشد. تغییر آخر ذخیره نشد.';
+  if (status === 401 || status === 403) return 'دسترسی نداری یا نشستت منقضی شده. دوباره وارد شو.';
+  return 'تغییر ذخیره نشد. دوباره امتحان کن.';
+}
+
+const ownerId = () => pb.authStore.record!.id;
 const now = () => new Date().toISOString();
 
-function newTask(category: CategoryKey, text: string, projectId: string | null = null, extra: Partial<Task> = {}): Task {
-  return { id: uid(), text, done: false, due: null, category, projectId, createdAt: now(), ...extra };
-}
+let unsubscribe: (() => void) | null = null;
+// Bumped on every start/stop so a slow, superseded start() can't install stale data or subscriptions.
+let session = 0;
 
-function seed(): PlannerData {
-  const p1: Project = { id: uid(), title: 'وب‌سایت فروشگاه', createdAt: now() };
-  const p2: Project = { id: uid(), title: 'اپلیکیشن مدیریت انبار', createdAt: now() };
-  return {
-    projects: [p1, p2],
-    tasks: [
-      newTask('actions', 'تماس با حسابدار', null, { due: todayYmd() }),
-      newTask('sport', '۳۰ دقیقه پیاده‌روی'),
-      newTask('projects', 'اتصال درگاه پرداخت', p1.id),
-      newTask('projects', 'صفحه‌ی پیگیری سفارش', p1.id),
-      newTask('projects', 'تست ریسپانسیو موبایل', p1.id, { done: true }),
-      newTask('projects', 'گزارش خروجی اکسل', p2.id),
-      newTask('projects', 'اصلاح باگ جستجو', p2.id),
-    ],
-    events: [{ id: uid(), date: todayYmd(), time: '', title: 'جلسه هماهنگی تیم', createdAt: now() }],
+export const usePlanner = create<PlannerState>()((set, get) => {
+  const list = <K extends Key>(key: K) => get()[key] as Item<K>[];
+  const put = <K extends Key>(key: K, items: Item<K>[]) => set({ [key]: items } as Partial<PlannerState>);
+
+  // Optimistic primitives. Each returns its own undo, which touches only the records it changed,
+  // so rolling back one failed request never reverts other, successful edits.
+  const insert = <K extends Key>(key: K, item: Item<K>) => {
+    put(key, [...list(key), item]);
+    return () => put(key, list(key).filter((x) => x.id !== item.id));
   };
-}
+  const patch = <K extends Key>(key: K, id: string, changes: Partial<Item<K>>) => {
+    const before = list(key).find((x) => x.id === id);
+    if (!before) return () => {};
+    put(key, list(key).map((x) => (x.id === id ? { ...x, ...changes } : x)));
+    const reverted = Object.fromEntries(Object.keys(changes).map((k) => [k, before[k as keyof typeof before]]));
+    return () => put(key, list(key).map((x) => (x.id === id ? { ...x, ...reverted } : x)));
+  };
+  const remove = <K extends Key>(key: K, keep: (x: Item<K>) => boolean) => {
+    const removed = list(key).filter((x) => !keep(x));
+    put(key, list(key).filter(keep));
+    return () => put(key, removed.reduce<Item<K>[]>((acc, x) => upsert(acc, x), list(key)));
+  };
 
-export const usePlanner = create<PlannerData & PlannerActions>()(
-  persist(
-    (set) => ({
-      ...seed(),
+  /** Run the server call; on failure undo the optimistic change and tell the user. */
+  const sync = (request: () => Promise<unknown>, ...undo: (() => void)[]) => {
+    const mine = session;
+    request().catch((err) => {
+      if (mine !== session) return;
+      console.error(err);
+      undo.reverse().forEach((u) => u());
+      set({ error: errorMessage(err) });
+    });
+  };
 
-      addTask: (category, text, projectId) =>
-        set((s) => ({ tasks: [...s.tasks, newTask(category, text, projectId ?? null)] })),
-      updateTask: (id, patch) =>
-        set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
-      deleteTask: (id) => set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
+  const realtime =
+    <K extends Key>(key: K): RealtimeHandler<Item<K>> =>
+    (action, item) =>
+      put(key, action === 'delete' ? list(key).filter((x) => x.id !== item.id) : upsert(list(key), item));
 
-      addProject: (title) =>
-        set((s) => ({ projects: [...s.projects, { id: uid(), title, createdAt: now() }] })),
-      renameProject: (id, title) =>
-        set((s) => ({ projects: s.projects.map((p) => (p.id === id ? { ...p, title } : p)) })),
-      deleteProject: (id) =>
-        set((s) => ({
-          projects: s.projects.filter((p) => p.id !== id),
-          tasks: s.tasks.filter((t) => t.projectId !== id),
-        })),
+  return {
+    ...EMPTY,
+    status: 'idle',
+    error: null,
 
-      addEvent: (ev) => set((s) => ({ events: [...s.events, { ...ev, id: uid(), createdAt: now() }] })),
-      updateEvent: (id, patch) =>
-        set((s) => ({ events: s.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),
-      deleteEvent: (id) => set((s) => ({ events: s.events.filter((e) => e.id !== id) })),
-    }),
-    {
-      name: 'planner-data-v4',
-      version: 4,
-      partialize: ({ projects, tasks, events }) => ({ projects, tasks, events }),
+    start: async () => {
+      get().stop();
+      const mine = session;
+      set({ status: 'loading' });
+      try {
+        const data = await plannerApi.fetchAll();
+        if (mine !== session) return;
+        set({ ...data, status: 'ready' });
+        const unsub = await subscribeAll({
+          projects: realtime('projects'),
+          tasks: realtime('tasks'),
+          events: realtime('events'),
+        });
+        if (mine !== session) return unsub();
+        unsubscribe = unsub;
+      } catch (err) {
+        if (mine !== session) return;
+        console.error(err);
+        // The load-error state in <App> explains this; the banner is for failed edits.
+        set({ status: 'error' });
+      }
     },
-  ),
-);
+    stop: () => {
+      session++;
+      unsubscribe?.();
+      unsubscribe = null;
+      set({ ...EMPTY, status: 'idle', error: null });
+    },
+    dismissError: () => set({ error: null }),
+
+    addTask: (category, text, projectId) => {
+      const task: Task = { id: uid(), owner: ownerId(), text, done: false, due: null, category, projectId: projectId ?? null, createdAt: now() };
+      sync(() => plannerApi.createTask(task), insert('tasks', task));
+    },
+    updateTask: (id, changes) => sync(() => plannerApi.updateTask(id, changes), patch('tasks', id, changes)),
+    deleteTask: (id) => sync(() => plannerApi.deleteTask(id), remove('tasks', (t) => t.id !== id)),
+
+    addProject: (title) => {
+      const project: Project = { id: uid(), owner: ownerId(), title, createdAt: now() };
+      sync(() => plannerApi.createProject(project), insert('projects', project));
+    },
+    renameProject: (id, title) => sync(() => plannerApi.updateProject(id, { title }), patch('projects', id, { title })),
+    // The server cascades the delete to the project's tasks.
+    deleteProject: (id) =>
+      sync(
+        () => plannerApi.deleteProject(id),
+        remove('projects', (p) => p.id !== id),
+        remove('tasks', (t) => t.projectId !== id),
+      ),
+
+    addEvent: (ev) => {
+      const event: CalendarEvent = { ...ev, id: uid(), owner: ownerId(), createdAt: now() };
+      sync(() => plannerApi.createEvent(event), insert('events', event));
+    },
+    updateEvent: (id, changes) => sync(() => plannerApi.updateEvent(id, changes), patch('events', id, changes)),
+    deleteEvent: (id) => sync(() => plannerApi.deleteEvent(id), remove('events', (e) => e.id !== id)),
+  };
+});

@@ -4,6 +4,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: '/',
+  server: {
+    // backend/ holds the PocketBase binary and live SQLite files — not frontend sources.
+    watch: { ignored: ['**/backend/**'] },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -30,6 +34,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,woff2}'],
+        // When PocketBase serves the app on the same origin, leave its admin UI and API alone.
+        navigateFallbackDenylist: [/^\/_\//, /^\/api\//],
       },
     }),
   ],

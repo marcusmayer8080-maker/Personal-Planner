@@ -3,3 +3,7 @@ dist
 dev-dist
 *.log
 .DS_Store
+
+# PocketBase: binary and local data stay out of git; migrations are committed.
+backend/*
+!backend/pb_migrations/

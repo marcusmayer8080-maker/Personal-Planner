@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildAgenda } from './summary';
 import type { CalendarEvent, Project, Task } from './types';
 
-const base = { createdAt: '' };
+const base = { owner: 'u', createdAt: '' };
 const range = { start: new Date(2026, 8, 26), end: new Date(2026, 9, 2) };
 
 describe('buildAgenda', () => {

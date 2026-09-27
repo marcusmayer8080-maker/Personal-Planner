@@ -383,3 +383,55 @@ main{
   padding:7px 14px;font-family:inherit;font-weight:700;font-size:0.78rem;cursor:pointer;
   white-space:nowrap;
 }
+
+/* account */
+.topbar-end{display:flex;align-items:center;gap:8px}
+.account{position:relative}
+.account-btn{
+  width:32px;height:32px;border-radius:50%;border:1px solid var(--line);
+  background:var(--accent-soft);color:var(--accent);font-family:inherit;font-weight:800;
+  font-size:0.85rem;cursor:pointer;
+}
+.account-menu{
+  position:absolute;left:0;top:calc(100% + 6px);min-width:190px;z-index:30;
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.18);
+}
+.account-name{font-weight:800;font-size:0.85rem}
+.account-email{color:var(--ink-dim);font-size:0.72rem;margin:2px 0 10px;text-align:right}
+.account-signout{
+  width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+  border-radius:7px;padding:6px;font-family:inherit;font-size:0.78rem;cursor:pointer;
+}
+.account-signout:hover{border-color:var(--accent);color:var(--accent)}
+
+/* status */
+.error-banner{
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:var(--accent-soft);color:var(--accent);font-size:0.78rem;padding:8px 16px;
+}
+.link-btn{
+  background:none;border:none;color:var(--accent);font-family:inherit;font-size:inherit;
+  text-decoration:underline;cursor:pointer;padding:0;
+}
+
+/* auth */
+.auth{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.auth-card{
+  width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px;
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 20px;
+}
+.auth-card h1{font-size:1.1rem;font-weight:800;margin:0 0 2px;text-align:center}
+.auth-tabs{justify-content:center;margin-bottom:0}
+.auth-card label{display:flex;flex-direction:column;gap:5px;font-size:0.76rem;color:var(--ink-dim)}
+.auth-card input{
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:9px 11px;color:var(--ink);font-family:inherit;font-size:0.9rem;
+}
+.auth-card input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.auth-card .submit{
+  background:var(--accent);color:var(--surface);border:none;border-radius:8px;
+  padding:10px;font-family:inherit;font-weight:800;font-size:0.88rem;cursor:pointer;margin-top:4px;
+}
+.auth-card .submit:disabled{opacity:0.6;cursor:default}
+.auth-error{background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:8px 10px;font-size:0.78rem}

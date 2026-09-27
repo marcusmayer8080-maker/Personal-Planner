@@ -1,4 +1,5 @@
 import { categoryByKey } from '../domain/categories';
+import { AccountMenu } from './AccountMenu';
 import { usePlanner } from '../store/plannerStore';
 import { useUi, type MainTab } from '../store/uiStore';
 
@@ -30,13 +31,16 @@ export function TopBar() {
   return (
     <div className="topbar">
       <h1>{TAB_TITLES[mainTab]}</h1>
-      <div className="summary">
-        {stats.map((s) => (
-          <div key={s.lbl} className={`stat${s.remaining ? ' remaining' : ''}`}>
-            <span className="num">{s.num}</span>
-            <span className="lbl">{s.lbl}</span>
-          </div>
-        ))}
+      <div className="topbar-end">
+        <div className="summary">
+          {stats.map((s) => (
+            <div key={s.lbl} className={`stat${s.remaining ? ' remaining' : ''}`}>
+              <span className="num">{s.num}</span>
+              <span className="lbl">{s.lbl}</span>
+            </div>
+          ))}
+        </div>
+        <AccountMenu />
       </div>
     </div>
   );
