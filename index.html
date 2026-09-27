@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>اقدامات مانده</title>
-<meta name="description" content="پیگیری کارهای باقی‌مانده، اقدامات و تقویم پروژه‌ها">
+<meta name="description" content="ثبت کارهای زندگی و پروژه‌ها، با نمای امروز/هفته/ماه و تقویم">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#a1471f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -115,7 +115,35 @@
   .tab-panel{display:none}
   .tab-panel.active{display:block}
 
-  /* projects tab */
+  /* pill / chip sub-nav */
+  .pill-row{
+    display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .pill{
+    background:var(--surface);border:1px solid var(--line);color:var(--ink-dim);
+    border-radius:999px;padding:6px 12px;font-family:inherit;font-size:0.76rem;
+    cursor:pointer;white-space:nowrap;
+  }
+  .pill.active{background:var(--accent);color:var(--surface);border-color:var(--accent);font-weight:700}
+
+  .chip-row{
+    display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;
+    border-bottom:1px solid var(--line);
+    -webkit-overflow-scrolling:touch;
+  }
+  .chip-row::-webkit-scrollbar{display:none}
+  .chip{
+    flex-shrink:0;background:var(--surface);border:1px solid var(--line);color:var(--ink-dim);
+    border-radius:999px;padding:6px 13px;font-family:inherit;font-size:0.78rem;
+    cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;
+  }
+  .chip .ic{font-size:0.9rem}
+  .chip.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);font-weight:700}
+
+  .cat-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cat-head h2{font-size:0.9rem;font-weight:800;margin:0}
+
+  /* projects (cards) */
   #projects{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
@@ -199,10 +227,6 @@
   .task:hover .del-btn, .row:hover .del-btn{opacity:1}
   .del-btn:hover{color:var(--accent)}
 
-  .task-cb-placeholder{
-    width:15px;height:15px;flex-shrink:0;border-radius:4px;
-    border:1.5px dashed var(--line);
-  }
   .add-task{display:flex;gap:5px;margin-top:6px;border-top:1px solid var(--line);padding-top:6px}
   .add-task input{
     flex:1;width:0;min-width:0;background:var(--bg);border:1px solid var(--line);
@@ -213,16 +237,10 @@
     background:var(--accent-soft);color:var(--accent);border:none;border-radius:7px;
     padding:5px 10px;font-family:inherit;font-weight:700;font-size:0.8rem;cursor:pointer;
   }
-  .add-task-row{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:4px}
-  .add-task-row .task-text::placeholder{color:var(--ink-dim)}
-  .add-task-btn{
-    background:var(--accent-soft);color:var(--accent);border-radius:6px;
-    width:20px;height:20px;font-size:0.9rem;flex-shrink:0;
-  }
 
   .empty-note{color:var(--ink-dim);font-size:0.82rem;text-align:center;padding:22px 0}
 
-  /* actions tab */
+  /* flat category list */
   .row{
     display:flex;align-items:center;gap:8px;
     background:var(--surface);border:1px solid var(--line);border-radius:9px;
@@ -247,7 +265,11 @@
     width:16px;height:16px;flex-shrink:0;border-radius:5px;
     border:1.5px dashed var(--line);
   }
-  .add-action-row{background:transparent;border-style:dashed}
+  .add-row{background:transparent;border-style:dashed}
+  .add-task-btn{
+    background:var(--accent-soft);color:var(--accent);border-radius:6px;
+    width:20px;height:20px;font-size:0.9rem;flex-shrink:0;
+  }
 
   /* calendar tab */
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -295,7 +317,7 @@
   }
   .gcal-link:hover{opacity:0.8}
 
-  /* week tab */
+  /* summary view rows */
   .week-row{
     display:flex;align-items:center;gap:10px;
     background:var(--surface);border:1px solid var(--line);border-radius:9px;
@@ -313,19 +335,8 @@
     font-size:0.6rem;border-radius:999px;padding:1px 8px;white-space:nowrap;flex-shrink:0;
   }
   .kind-badge.event{background:var(--event-soft);color:var(--event)}
-  .kind-badge.action{background:var(--accent-soft);color:var(--accent)}
-  .kind-badge.task{background:var(--done-soft, var(--bg));color:var(--done)}
-  .week-body .proj{color:var(--ink-dim)}
-
-  /* actions-projects merged tab */
-  .section-head{
-    display:flex;align-items:center;justify-content:space-between;
-    margin:18px 0 8px;
-  }
-  .section-head h2{font-size:0.85rem;font-weight:800;margin:0;color:var(--ink-dim)}
-  .section-head .icon-btn{
-    font-size:1rem;border:1px solid var(--line);border-radius:7px;width:26px;height:26px;
-  }
+  .kind-badge.category{background:var(--accent-soft);color:var(--accent)}
+  .kind-badge.task{background:var(--bg);color:var(--done);border:1px solid var(--done)}
 
   /* top nav */
   .top-nav{
@@ -337,10 +348,10 @@
   }
   .top-nav button{
     flex:1;background:none;border:none;color:var(--ink-dim);
-    font-family:inherit;font-size:0.68rem;padding:8px 4px;cursor:pointer;
+    font-family:inherit;font-size:0.72rem;padding:9px 4px;cursor:pointer;
     display:flex;flex-direction:column;align-items:center;gap:3px;
   }
-  .top-nav button .ic{font-size:1.1rem;line-height:1}
+  .top-nav button .ic{font-size:1.15rem;line-height:1}
   .top-nav button.active{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
 
   .fab{
@@ -393,24 +404,28 @@
 
 <div class="app">
   <div class="topbar">
-    <h1 id="tabTitle">اقدامات</h1>
+    <h1 id="tabTitle">نماها</h1>
     <div class="summary" id="summary"></div>
   </div>
 
   <nav class="top-nav">
-    <button data-tab="week-current" class="active"><span class="ic">🗓️</span>هفته جاری</button>
-    <button data-tab="week-next"><span class="ic">📆</span>هفته پیش‌رو</button>
+    <button data-tab="summary" class="active"><span class="ic">📋</span>نماها</button>
+    <button data-tab="categories"><span class="ic">🗂️</span>ثبت کارهام</button>
     <button data-tab="calendar"><span class="ic">📅</span>تقویم</button>
-    <button data-tab="actions-projects"><span class="ic">✅</span>اقدامات و پروژه‌ها</button>
   </nav>
 
   <main>
-    <section id="tab-week-current" class="tab-panel active">
-      <div id="weekCurrentList"></div>
+    <section id="tab-summary" class="tab-panel active">
+      <div class="pill-row" id="summaryPills"></div>
+      <div id="summaryList"></div>
     </section>
 
-    <section id="tab-week-next" class="tab-panel">
-      <div id="weekNextList"></div>
+    <section id="tab-categories" class="tab-panel">
+      <div class="chip-row" id="categoryChips"></div>
+      <div class="cat-head">
+        <h2 id="categoryTitle"></h2>
+      </div>
+      <div id="categoryBody"></div>
     </section>
 
     <section id="tab-calendar" class="tab-panel">
@@ -423,15 +438,6 @@
       <div class="day-events-title" id="dayEventsTitle"></div>
       <div id="dayEvents"></div>
     </section>
-
-    <section id="tab-actions-projects" class="tab-panel">
-      <div id="actionsList"></div>
-      <div class="section-head">
-        <h2>پروژه‌ها</h2>
-        <button id="addProjectInline" class="icon-btn" aria-label="افزودن پروژه" title="افزودن پروژه">+</button>
-      </div>
-      <div id="projects"></div>
-    </section>
   </main>
 </div>
 
@@ -440,8 +446,23 @@
 
 <script>
 (function(){
-  var STORAGE_KEY = 'planner-data-v2';
-  var OLD_KEY = 'planner-data-v1';
+  var STORAGE_KEY = 'planner-data-v3';
+  var OLD_KEY_V2 = 'planner-data-v2';
+  var OLD_KEY_V1 = 'planner-data-v1';
+
+  var CATEGORIES = [
+    {key:'actions',  title:'کارها',            short:'کارها',   icon:'✅', kind:'flat'},
+    {key:'projects', title:'پروژه‌ها',          short:'پروژه‌ها', icon:'🗂️', kind:'projects'},
+    {key:'sport',    title:'ورزش و سلامتی',     short:'ورزش',    icon:'🏃', kind:'flat'},
+    {key:'fun',      title:'تفریح و سرگرمی',    short:'تفریح',   icon:'🎮', kind:'flat'},
+    {key:'social',   title:'دوستا و آشناها',    short:'دوستا',   icon:'👥', kind:'flat'},
+    {key:'study',    title:'کتاب و یادگیری',    short:'مطالعه',  icon:'📚', kind:'flat'},
+    {key:'spirit',   title:'معنویت',            short:'معنویت',  icon:'🕊️', kind:'flat'}
+  ];
+  function categoryByKey(key){
+    for(var i=0;i<CATEGORIES.length;i++){ if(CATEGORIES[i].key===key) return CATEGORIES[i]; }
+    return null;
+  }
 
   var seedProjects = [
     {id:'p1', title:'وب‌سایت فروشگاه', tasks:[
@@ -452,9 +473,6 @@
     {id:'p2', title:'اپلیکیشن مدیریت انبار', tasks:[
       {id:'t4', text:'گزارش خروجی اکسل', done:false},
       {id:'t5', text:'اصلاح باگ جستجو', done:false}
-    ]},
-    {id:'p3', title:'داشبورد داخلی', tasks:[
-      {id:'t6', text:'نمودار فروش ماهانه', done:false}
     ]}
   ];
 
@@ -528,6 +546,12 @@
   }
   function toJalaali(gy,gm,gd){ return d2j(g2d(gy,gm,gd)); }
   function toGregorian(jy,jm,jd){ return d2g(j2d(jy,jm,jd)); }
+  function isLeapJalaaliYear(jy){ return jalCal(jy).leap === 0; }
+  function jalaaliMonthLength(jy,jm){
+    if(jm<=6) return 31;
+    if(jm<=11) return 30;
+    return isLeapJalaaliYear(jy) ? 30 : 29;
+  }
   function jalaaliOf(ymdStr){
     var p = ymdStr.split('-');
     return toJalaali(parseInt(p[0],10), parseInt(p[1],10), parseInt(p[2],10));
@@ -537,48 +561,72 @@
     return faNum(two(j.jy % 100)) + '/' + faNum(two(j.jm)) + '/' + faNum(two(j.jd));
   }
 
+  function emptyCategories(){
+    var out = {};
+    CATEGORIES.forEach(function(c){ if(c.kind==='flat') out[c.key] = {items:[]}; });
+    return out;
+  }
+
   function load(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
       if(raw) return JSON.parse(raw);
-      var old = localStorage.getItem(OLD_KEY);
-      if(old) return {projects: JSON.parse(old), actions: [], events: []};
+      var v2 = localStorage.getItem(OLD_KEY_V2);
+      if(v2){
+        var d2 = JSON.parse(v2);
+        var cats = emptyCategories();
+        cats.actions.items = d2.actions || [];
+        return {projects: d2.projects || [], events: d2.events || [], categories: cats};
+      }
+      var v1 = localStorage.getItem(OLD_KEY_V1);
+      if(v1){
+        var cats1 = emptyCategories();
+        return {projects: JSON.parse(v1), events: [], categories: cats1};
+      }
     }catch(e){}
-    return {projects: seedProjects, actions: [
-      {id:'a1', text:'تماس با حسابدار', done:false, due: todayYmd()}
-    ], events: [
-      {id:'e1', date: todayYmd(), time:'', title:'جلسه هماهنگی تیم'}
-    ]};
+    var seedCats = emptyCategories();
+    seedCats.actions.items = [{id:'a1', text:'تماس با حسابدار', done:false, due: todayYmd()}];
+    seedCats.sport.items = [{id:'s1', text:'۳۰ دقیقه پیاده‌روی', done:false, due: null}];
+    return {
+      projects: seedProjects,
+      events: [{id:'e1', date: todayYmd(), time:'', title:'جلسه هماهنگی تیم'}],
+      categories: seedCats
+    };
   }
   function save(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
   }
 
   var state = load();
-  var activeTab = 'week-current';
+  var mainTab = 'summary';
+  var summaryView = 'week-current';
+  var activeCategory = 'actions';
   var selectedDate = todayYmd();
   var todayJ = jalaaliOf(selectedDate);
   var calCursor = {jy: todayJ.jy, jm: todayJ.jm};
 
   var tabTitleEl = document.getElementById('tabTitle');
-  var summaryEl = document.getElementById('summary');
-  var projectsEl = document.getElementById('projects');
-  var actionsListEl = document.getElementById('actionsList');
+  var summaryStatsEl = document.getElementById('summary');
+  var summaryPillsEl = document.getElementById('summaryPills');
+  var summaryListEl = document.getElementById('summaryList');
+  var categoryChipsEl = document.getElementById('categoryChips');
+  var categoryTitleEl = document.getElementById('categoryTitle');
+  var categoryBodyEl = document.getElementById('categoryBody');
   var calGridEl = document.getElementById('calGrid');
   var calLabelEl = document.getElementById('calLabel');
   var dayEventsTitleEl = document.getElementById('dayEventsTitle');
   var dayEventsEl = document.getElementById('dayEvents');
-  var weekCurrentListEl = document.getElementById('weekCurrentList');
-  var weekNextListEl = document.getElementById('weekNextList');
   var fab = document.getElementById('fabAdd');
   var popover = document.getElementById('addPopover');
 
-  var TAB_TITLES = {
-    'week-current':'هفته جاری',
-    'week-next':'هفته پیش‌رو',
-    calendar:'تقویم',
-    'actions-projects':'اقدامات و پروژه‌ها'
-  };
+  var MAIN_TAB_TITLES = { summary:'نماها', categories:'ثبت کارهام', calendar:'تقویم' };
+  var SUMMARY_VIEWS = [
+    {key:'today',        label:'امروز'},
+    {key:'tomorrow',     label:'فردا'},
+    {key:'week-current', label:'این هفته'},
+    {key:'week-next',    label:'هفته‌ی بعد'},
+    {key:'month-current',label:'این ماه'}
+  ];
 
   function gcalUrl(ev){
     var tz = 'UTC';
@@ -644,43 +692,128 @@
     return wrap;
   }
 
-  function renderSummary(){
-    var totalTasks=0, doneTasks=0;
-    state.projects.forEach(function(p){
-      totalTasks += p.tasks.length;
-      doneTasks += p.tasks.filter(function(t){return t.done}).length;
-    });
-    var remainingActions = state.actions.filter(function(a){return !a.done}).length;
-    summaryEl.innerHTML = '';
-    var stats;
-    if(activeTab === 'actions-projects'){
-      stats = [
-        {num: remainingActions, lbl:'اقدام باز', cls:'remaining'},
-        {num: state.projects.length, lbl:'پروژه'},
-        {num: totalTasks-doneTasks, lbl:'کار مانده', cls:'remaining'}
-      ];
-    } else if(activeTab === 'calendar'){
+  function renderTopStats(){
+    summaryStatsEl.innerHTML = '';
+    var stats = [];
+    if(mainTab === 'categories'){
+      var cat = categoryByKey(activeCategory);
+      if(cat.kind === 'flat'){
+        var open = state.categories[activeCategory].items.filter(function(i){return !i.done}).length;
+        stats = [{num: open, lbl:'باز', cls:'remaining'}];
+      } else {
+        var totalTasks=0, doneTasks=0;
+        state.projects.forEach(function(p){
+          totalTasks += p.tasks.length;
+          doneTasks += p.tasks.filter(function(t){return t.done}).length;
+        });
+        stats = [
+          {num: state.projects.length, lbl:'پروژه'},
+          {num: totalTasks-doneTasks, lbl:'کار مانده', cls:'remaining'}
+        ];
+      }
+    } else if(mainTab === 'calendar'){
       stats = [{num: state.events.length, lbl:'رویداد'}];
-    } else {
-      stats = [];
     }
     stats.forEach(function(s){
       var el = document.createElement('div');
       el.className = 'stat ' + (s.cls||'');
       el.innerHTML = '<span class="num">'+s.num+'</span><span class="lbl">'+s.lbl+'</span>';
-      summaryEl.appendChild(el);
+      summaryStatsEl.appendChild(el);
     });
   }
 
-  function renderProjects(){
-    projectsEl.innerHTML = '';
+  /* ---------- flat category list ---------- */
+  function renderFlatCategory(key, containerEl){
+    containerEl.innerHTML = '';
+    var cat = categoryByKey(key);
+    var list = state.categories[key].items;
+
+    var addRow = document.createElement('div');
+    addRow.className = 'row add-row';
+    var addPlaceholder = document.createElement('span');
+    addPlaceholder.className = 'row-cb-placeholder';
+    var addInput = document.createElement('input');
+    addInput.type = 'text';
+    addInput.className = 'task-text';
+    addInput.placeholder = 'یه مورد جدید بنویس…';
+    var addBtn = document.createElement('button');
+    addBtn.className = 'icon-btn add-task-btn';
+    addBtn.textContent = '+';
+    addBtn.setAttribute('aria-label','اضافه کن');
+    function submitItem(){
+      var val = addInput.value.trim();
+      if(!val) return;
+      list.push({id: uid(), text: val, done:false, due: null});
+      addInput.value = '';
+      save(); renderAll();
+    }
+    addBtn.addEventListener('click', submitItem);
+    addInput.addEventListener('keydown', function(e){ if(e.key==='Enter') submitItem(); });
+    addRow.appendChild(addPlaceholder);
+    addRow.appendChild(addInput);
+    addRow.appendChild(addBtn);
+    containerEl.appendChild(addRow);
+
+    var open = list.filter(function(i){return !i.done});
+    if(open.length === 0){
+      var note = document.createElement('div');
+      note.className = 'empty-note';
+      note.textContent = 'چیزی تو «' + cat.title + '» نداری، از بالا یکی اضافه کن';
+      containerEl.appendChild(note);
+      return;
+    }
+    open.forEach(function(item){
+      var row = document.createElement('div');
+      row.className = 'row';
+
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = item.done;
+      cb.addEventListener('change', function(){
+        item.done = cb.checked;
+        save(); renderAll();
+      });
+
+      var label = document.createElement('input');
+      label.type = 'text';
+      label.className = 'task-text';
+      label.value = item.text;
+      label.addEventListener('change', function(){
+        item.text = label.value.trim() || item.text;
+        label.value = item.text;
+        save();
+      });
+
+      row.appendChild(cb);
+      row.appendChild(label);
+      row.appendChild(makeDueControl(item, function(){ save(); }));
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.textContent = '✕';
+      delBtn.setAttribute('aria-label','حذف');
+      delBtn.addEventListener('click', function(){
+        state.categories[key].items = list.filter(function(i){return i.id !== item.id});
+        save(); renderAll();
+      });
+      row.appendChild(delBtn);
+
+      containerEl.appendChild(row);
+    });
+  }
+
+  /* ---------- projects (cards) ---------- */
+  function renderProjects(containerEl){
+    containerEl.innerHTML = '';
     if(state.projects.length === 0){
       var note = document.createElement('div');
       note.className = 'empty-note';
-      note.textContent = 'هنوز پروژه‌ای اضافه نکرده‌اید — از دکمه‌ی + استفاده کن';
-      projectsEl.appendChild(note);
+      note.textContent = 'هنوز پروژه‌ای نساختی — رو + بزن';
+      containerEl.appendChild(note);
       return;
     }
+    var grid = document.createElement('div');
+    grid.id = 'projects';
     state.projects.forEach(function(project){
       var remaining = project.tasks.filter(function(t){return !t.done}).length;
       var card = document.createElement('div');
@@ -747,7 +880,7 @@
 
         li.appendChild(cb);
         li.appendChild(label);
-        li.appendChild(makeDueControl(task, function(){ save(); renderWeekPanels(); }));
+        li.appendChild(makeDueControl(task, function(){ save(); }));
 
         var delBtn = document.createElement('button');
         delBtn.className = 'del-btn';
@@ -766,7 +899,7 @@
       addTask.className = 'add-task';
       var taskInput = document.createElement('input');
       taskInput.type = 'text';
-      taskInput.placeholder = 'کار جدید…';
+      taskInput.placeholder = 'یه کار جدید بنویس…';
       var addTaskBtn = document.createElement('button');
       addTaskBtn.textContent = '+';
       function submitTask(){
@@ -782,87 +915,56 @@
       addTask.appendChild(addTaskBtn);
       card.appendChild(addTask);
 
-      projectsEl.appendChild(card);
+      grid.appendChild(card);
+    });
+    containerEl.appendChild(grid);
+  }
+
+  function renderCategoryChips(){
+    categoryChipsEl.innerHTML = '';
+    CATEGORIES.forEach(function(cat){
+      var chip = document.createElement('button');
+      chip.className = 'chip' + (cat.key===activeCategory ? ' active' : '');
+      chip.innerHTML = '<span class="ic">'+cat.icon+'</span>'+cat.short;
+      chip.addEventListener('click', function(){
+        activeCategory = cat.key;
+        popover.hidden = true;
+        renderCategoriesTab();
+        renderTopStats();
+      });
+      categoryChipsEl.appendChild(chip);
     });
   }
 
-  function renderActions(){
-    actionsListEl.innerHTML = '';
-
-    var addRow = document.createElement('div');
-    addRow.className = 'row add-action-row';
-    var addPlaceholder = document.createElement('span');
-    addPlaceholder.className = 'row-cb-placeholder';
-    var addInput = document.createElement('input');
-    addInput.type = 'text';
-    addInput.className = 'task-text';
-    addInput.placeholder = 'اقدام جدید…';
-    var addBtn = document.createElement('button');
-    addBtn.className = 'icon-btn add-task-btn';
-    addBtn.textContent = '+';
-    addBtn.setAttribute('aria-label','افزودن اقدام');
-    function submitAction(){
-      var val = addInput.value.trim();
-      if(!val) return;
-      state.actions.push({id: uid(), text: val, done:false, due: null});
-      addInput.value = '';
-      save(); renderAll();
+  function renderCategoriesTab(){
+    renderCategoryChips();
+    var cat = categoryByKey(activeCategory);
+    categoryTitleEl.textContent = cat.title;
+    if(cat.kind === 'projects'){
+      var head = document.createElement('div');
+      head.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px';
+      var addBtn = document.createElement('button');
+      addBtn.className = 'icon-btn';
+      addBtn.style.cssText = 'border:1px solid var(--line);border-radius:7px;width:26px;height:26px;font-size:1rem';
+      addBtn.textContent = '+';
+      addBtn.setAttribute('aria-label','افزودن پروژه');
+      addBtn.addEventListener('click', function(){
+        if(!popover.hidden){ popover.hidden = true; return; }
+        openPopover('projects');
+      });
+      head.appendChild(addBtn);
+      categoryBodyEl.innerHTML = '';
+      categoryBodyEl.appendChild(head);
+      var body = document.createElement('div');
+      renderProjects(body);
+      categoryBodyEl.appendChild(body);
+    } else {
+      renderFlatCategory(activeCategory, categoryBodyEl);
     }
-    addBtn.addEventListener('click', submitAction);
-    addInput.addEventListener('keydown', function(e){ if(e.key==='Enter') submitAction(); });
-    addRow.appendChild(addPlaceholder);
-    addRow.appendChild(addInput);
-    addRow.appendChild(addBtn);
-    actionsListEl.appendChild(addRow);
-
-    var open = state.actions.filter(function(a){return !a.done});
-    if(open.length === 0){
-      var note = document.createElement('div');
-      note.className = 'empty-note';
-      note.textContent = 'اقدام بازی نداری';
-      actionsListEl.appendChild(note);
-      return;
-    }
-    open.forEach(function(action){
-      var row = document.createElement('div');
-      row.className = 'row';
-
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = action.done;
-      cb.addEventListener('change', function(){
-        action.done = cb.checked;
-        save(); renderAll();
-      });
-
-      var label = document.createElement('input');
-      label.type = 'text';
-      label.className = 'task-text';
-      label.value = action.text;
-      label.addEventListener('change', function(){
-        action.text = label.value.trim() || action.text;
-        label.value = action.text;
-        save();
-      });
-
-      row.appendChild(cb);
-      row.appendChild(label);
-      row.appendChild(makeDueControl(action, function(){ save(); renderWeekPanels(); }));
-
-      var delBtn = document.createElement('button');
-      delBtn.className = 'del-btn';
-      delBtn.textContent = '✕';
-      delBtn.setAttribute('aria-label','حذف اقدام');
-      delBtn.addEventListener('click', function(){
-        state.actions = state.actions.filter(function(a){return a.id !== action.id});
-        save(); renderAll();
-      });
-      row.appendChild(delBtn);
-
-      actionsListEl.appendChild(row);
-    });
+    fab.hidden = true;
   }
 
+  /* ---------- calendar ---------- */
   function renderCalendar(){
     calLabelEl.textContent = MONTHS_FA[calCursor.jm-1] + ' ' + faNum(calCursor.jy);
     calGridEl.innerHTML = '';
@@ -930,7 +1032,7 @@
       var note = document.createElement('div');
       note.className = 'empty-note';
       note.style.padding = '10px 0';
-      note.textContent = 'رویدادی برای این روز نیست';
+      note.textContent = 'این روز رویدادی نداری';
       dayEventsEl.appendChild(note);
     }
     dayEvents.forEach(function(ev){
@@ -980,6 +1082,7 @@
     });
   }
 
+  /* ---------- summary (aggregated views) ---------- */
   function weekRange(offset){
     var today = new Date(); today.setHours(0,0,0,0);
     var start = new Date(today);
@@ -989,42 +1092,80 @@
     return {start: start, end: end};
   }
 
-  function renderWeekPanel(listEl, offset, emptyMsg){
-    listEl.innerHTML = '';
-    var range = weekRange(offset);
-    var items = [];
+  function dateRangeFor(viewKey){
+    var today = new Date(); today.setHours(0,0,0,0);
+    if(viewKey === 'today'){
+      return {start:today, end:today};
+    }
+    if(viewKey === 'tomorrow'){
+      var t = new Date(today); t.setDate(t.getDate()+1);
+      return {start:t, end:t};
+    }
+    if(viewKey === 'week-current') return weekRange(0);
+    if(viewKey === 'week-next') return weekRange(1);
+    if(viewKey === 'month-current'){
+      var tj = jalaaliOf(todayYmd());
+      var firstG = toGregorian(tj.jy, tj.jm, 1);
+      var lastDay = jalaaliMonthLength(tj.jy, tj.jm);
+      var lastG = toGregorian(tj.jy, tj.jm, lastDay);
+      return {
+        start: new Date(firstG.gy, firstG.gm-1, firstG.gd),
+        end: new Date(lastG.gy, lastG.gm-1, lastG.gd)
+      };
+    }
+  }
 
-    state.events.forEach(function(ev){
-      var d = new Date(ev.date+'T00:00:00');
-      if(d >= range.start && d <= range.end){
-        items.push({kind:'event', date: ev.date, title: ev.title, sortKey: ev.date+'T'+(ev.time||'99:99'), meta: ev.time || 'تمام‌روز'});
-      }
-    });
-    state.actions.filter(function(a){return !a.done && a.due}).forEach(function(a){
-      var d = new Date(a.due+'T00:00:00');
-      if(d >= range.start && d <= range.end){
-        items.push({kind:'action', date: a.due, title: a.text, sortKey: a.due+'T50:00', meta: 'اقدام'});
-      }
+  function collectDueItems(){
+    var items = [];
+    CATEGORIES.filter(function(c){return c.kind==='flat'}).forEach(function(cat){
+      state.categories[cat.key].items.filter(function(i){return !i.done && i.due}).forEach(function(it){
+        items.push({kind:'category', title:it.text, date:it.due, meta:cat.title, sortKey: it.due+'T50:00'});
+      });
     });
     state.projects.forEach(function(p){
       p.tasks.filter(function(t){return !t.done && t.due}).forEach(function(t){
-        var d = new Date(t.due+'T00:00:00');
-        if(d >= range.start && d <= range.end){
-          items.push({kind:'task', date: t.due, title: t.text, sortKey: t.due+'T60:00', meta: p.title});
-        }
+        items.push({kind:'task', title:t.text, date:t.due, meta:p.title, sortKey: t.due+'T60:00'});
       });
+    });
+    state.events.forEach(function(ev){
+      items.push({kind:'event', title:ev.title, date:ev.date, meta: ev.time || 'تمام‌روز', sortKey: ev.date+'T'+(ev.time||'99:99')});
+    });
+    return items;
+  }
+
+  function renderSummaryPills(){
+    summaryPillsEl.innerHTML = '';
+    SUMMARY_VIEWS.forEach(function(v){
+      var pill = document.createElement('button');
+      pill.className = 'pill' + (v.key===summaryView ? ' active' : '');
+      pill.textContent = v.label;
+      pill.addEventListener('click', function(){
+        summaryView = v.key;
+        renderSummaryTab();
+      });
+      summaryPillsEl.appendChild(pill);
+    });
+  }
+
+  var KIND_LABEL = {event:'قرار', task:'کار پروژه', category:'کار'};
+
+  function renderSummaryTab(){
+    renderSummaryPills();
+    summaryListEl.innerHTML = '';
+    var range = dateRangeFor(summaryView);
+    var items = collectDueItems().filter(function(it){
+      var d = new Date(it.date+'T00:00:00');
+      return d >= range.start && d <= range.end;
     });
     items.sort(function(a,b){ return a.sortKey.localeCompare(b.sortKey); });
 
     if(items.length === 0){
       var note = document.createElement('div');
       note.className = 'empty-note';
-      note.textContent = emptyMsg;
-      listEl.appendChild(note);
+      note.textContent = 'برای این بازه چیزی ثبت نکردی';
+      summaryListEl.appendChild(note);
       return;
     }
-
-    var KIND_LABEL = {event:'قرار', action:'اقدام', task:'کار پروژه'};
 
     items.forEach(function(it){
       var d = new Date(it.date+'T00:00:00');
@@ -1042,7 +1183,7 @@
       t.className = 't';
       t.textContent = it.title;
       var meta = document.createElement('div');
-      meta.className = 'meta' + (it.kind==='task' ? ' proj' : '');
+      meta.className = 'meta';
       meta.textContent = it.meta;
       body.appendChild(t);
       body.appendChild(meta);
@@ -1054,20 +1195,21 @@
       row.appendChild(dateBox);
       row.appendChild(body);
       row.appendChild(badge);
-      listEl.appendChild(row);
+      summaryListEl.appendChild(row);
     });
   }
 
+  /* ---------- add popover (projects / calendar) ---------- */
   function buildPopoverForm(mode){
     popover.innerHTML = '';
     if(mode === 'projects'){
       var input = document.createElement('input');
       input.className = 'grow';
       input.type = 'text';
-      input.placeholder = 'نام پروژه‌ی جدید…';
+      input.placeholder = 'اسم پروژه‌ی جدید…';
       var btn = document.createElement('button');
       btn.className = 'submit';
-      btn.textContent = 'افزودن';
+      btn.textContent = 'اضافه کن';
       function submit(){
         var val = input.value.trim();
         if(!val) return;
@@ -1087,51 +1229,53 @@
       var timeIn = document.createElement('input');
       timeIn.className = 'time-in';
       timeIn.type = 'time';
-      var input = document.createElement('input');
-      input.className = 'grow';
-      input.type = 'text';
-      input.placeholder = 'عنوان رویداد…';
-      var btn = document.createElement('button');
-      btn.className = 'submit';
-      btn.textContent = 'افزودن';
-      function submit(){
-        var val = input.value.trim();
+      var input2 = document.createElement('input');
+      input2.className = 'grow';
+      input2.type = 'text';
+      input2.placeholder = 'اسم رویداد…';
+      var btn2 = document.createElement('button');
+      btn2.className = 'submit';
+      btn2.textContent = 'اضافه کن';
+      function submit2(){
+        var val = input2.value.trim();
         if(!val || !dateIn.value) return;
         state.events.push({id: uid(), date: dateIn.value, time: timeIn.value || '', title: val});
         selectedDate = dateIn.value;
         save(); popover.hidden = true; renderAll();
       }
-      btn.addEventListener('click', submit);
-      input.addEventListener('keydown', function(e){ if(e.key==='Enter') submit(); if(e.key==='Escape') popover.hidden=true; });
-      popover.appendChild(dateIn); popover.appendChild(timeIn); popover.appendChild(input); popover.appendChild(btn);
-      setTimeout(function(){input.focus();},0);
+      btn2.addEventListener('click', submit2);
+      input2.addEventListener('keydown', function(e){ if(e.key==='Enter') submit2(); if(e.key==='Escape') popover.hidden=true; });
+      popover.appendChild(dateIn); popover.appendChild(timeIn); popover.appendChild(input2); popover.appendChild(btn2);
+      setTimeout(function(){input2.focus();},0);
     }
   }
-
-  function renderWeekPanels(){
-    renderWeekPanel(weekCurrentListEl, 0, 'برای هفته جاری قرار یا اقدامی ثبت نشده');
-    renderWeekPanel(weekNextListEl, 1, 'برای هفته پیش‌رو قرار یا اقدامی ثبت نشده');
+  function openPopover(mode){
+    buildPopoverForm(mode);
+    popover.hidden = false;
   }
 
   function renderAll(){
-    tabTitleEl.textContent = TAB_TITLES[activeTab];
-    renderSummary();
-    renderProjects();
-    renderActions();
+    tabTitleEl.textContent = MAIN_TAB_TITLES[mainTab];
+    renderTopStats();
+    renderSummaryTab();
+    renderCategoriesTab();
     renderCalendar();
-    renderWeekPanels();
   }
 
   document.querySelectorAll('.top-nav button').forEach(function(btn){
     btn.addEventListener('click', function(){
-      activeTab = btn.getAttribute('data-tab');
+      mainTab = btn.getAttribute('data-tab');
       document.querySelectorAll('.top-nav button').forEach(function(b){ b.classList.toggle('active', b===btn); });
       document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-      document.getElementById('tab-'+activeTab).classList.add('active');
+      document.getElementById('tab-'+mainTab).classList.add('active');
       popover.hidden = true;
-      fab.hidden = (activeTab !== 'calendar');
-      tabTitleEl.textContent = TAB_TITLES[activeTab];
-      renderSummary();
+      tabTitleEl.textContent = MAIN_TAB_TITLES[mainTab];
+      renderTopStats();
+      if(mainTab === 'categories'){
+        fab.hidden = true;
+      } else {
+        fab.hidden = (mainTab !== 'calendar');
+      }
     });
   });
 
@@ -1146,19 +1290,9 @@
     renderCalendar();
   });
 
-  function openPopover(mode){
-    buildPopoverForm(mode);
-    popover.hidden = false;
-  }
-
   fab.addEventListener('click', function(){
     if(!popover.hidden){ popover.hidden = true; return; }
-    if(activeTab === 'calendar') openPopover('calendar');
-  });
-
-  document.getElementById('addProjectInline').addEventListener('click', function(){
-    if(!popover.hidden){ popover.hidden = true; return; }
-    openPopover('projects');
+    if(mainTab === 'calendar') openPopover('calendar');
   });
 
   renderAll();

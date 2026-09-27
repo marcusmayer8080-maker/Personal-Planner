@@ -1,4 +1,4 @@
-var CACHE = 'aghdamat-v1';
+var CACHE = 'aghdamat-v2';
 var ASSETS = [
   './',
   './index.html',
