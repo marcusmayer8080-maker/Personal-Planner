@@ -5,6 +5,5 @@ compatibility_date = "2026-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "planner"
-# Replace with the id printed by `npx wrangler d1 create planner` (local dev works with any value).
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "b1ede3f4-a7f4-44a7-9b06-9d53f3ac9e31"
 migrations_dir = "migrations"
