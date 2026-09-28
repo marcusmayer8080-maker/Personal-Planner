@@ -1,19 +1,37 @@
-// Verifies API access rules against a running local backend: `npm run check:rules`.
-// Run `npm run seed:dev` once first.
-import PocketBase from 'pocketbase';
-import { DEV_PB_URL, DEV_USERS } from './dev-users.mjs';
+// Verifies the API's access rules against a running server:
+//   npm run build && npm run dev:api     (in one terminal)
+//   npm run check:rules                  (in another)
+// Uses throwaway accounts with random emails, so it's safe to run repeatedly.
+// Refuses to run against anything but a local server.
 
-const [alice, bob] = await Promise.all(
-  DEV_USERS.map(async (u) => {
-    const pb = new PocketBase(DEV_PB_URL);
-    pb.autoCancellation(false);
-    await pb.collection('users').authWithPassword(u.email, u.password);
-    return pb;
-  }),
-);
-const guest = new PocketBase(DEV_PB_URL);
-const aliceId = alice.authStore.record.id;
-const bobId = bob.authStore.record.id;
+const BASE = process.env.API_URL ?? 'http://127.0.0.1:8788';
+if (!/^http:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/.test(BASE)) {
+  console.error(`Refusing to run against a non-local server: ${BASE}`);
+  process.exit(1);
+}
+
+const rnd = () => Math.random().toString(36).slice(2, 10);
+const newId = () => Array.from({ length: 15 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+
+/** Minimal client that keeps its own session cookie. */
+function client() {
+  let cookie = '';
+  return async (method, path, body, { origin = BASE } = {}) => {
+    const res = await fetch(BASE + '/api' + path, {
+      method,
+      headers: {
+        ...(body !== undefined && { 'Content-Type': 'application/json' }),
+        ...(cookie && { Cookie: cookie }),
+        ...(origin && { Origin: origin }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const set = res.headers.get('set-cookie');
+    if (set) cookie = set.split(';')[0];
+    const data = res.status === 204 ? null : await res.json().catch(() => null);
+    return { status: res.status, data };
+  };
+}
 
 let failures = 0;
 async function check(name, fn) {
@@ -25,58 +43,91 @@ async function check(name, fn) {
     console.log(`  FAIL  ${name}\n        ${err.message}`);
   }
 }
-async function mustFail(promise) {
-  try {
-    await promise;
-  } catch {
-    return;
-  }
-  throw new Error('request succeeded but should have been rejected');
+function expectStatus(res, ...allowed) {
+  if (!allowed.includes(res.status)) throw new Error(`status ${res.status} ${JSON.stringify(res.data)}, expected ${allowed.join('/')}`);
 }
-function assert(cond, msg) {
-  if (!cond) throw new Error(msg);
-}
+
+const alice = client();
+const bob = client();
+const guest = client();
+const pw = `pw-${rnd()}-${rnd()}`;
+
+console.log('auth');
+await check('sign up', async () => expectStatus(await alice('POST', '/auth/signup', { name: 'Alice', email: `alice-${rnd()}@example.test`, password: pw }), 201));
+await check('sign up second user', async () => expectStatus(await bob('POST', '/auth/signup', { name: 'Bob', email: `bob-${rnd()}@example.test`, password: pw }), 201));
+await check('short password rejected', async () => {
+  const r = await guest('POST', '/auth/signup', { name: 'x', email: `x-${rnd()}@example.test`, password: 'short' });
+  expectStatus(r, 400);
+  if (r.data?.error !== 'weak_password') throw new Error(r.data?.error);
+});
+await check('wrong password rejected', async () => {
+  const me = (await alice('GET', '/auth/me')).data;
+  expectStatus(await guest('POST', '/auth/login', { email: me.email, password: 'wrong-password' }), 400);
+});
+await check('guest has no session', async () => expectStatus(await guest('GET', '/auth/me'), 401));
 
 // Alice's data
-const project = await alice.collection('projects').create({ owner: aliceId, title: 'rules-check' });
-const task = await alice.collection('tasks').create({ owner: aliceId, text: 't', category: 'projects', project: project.id });
-const event = await alice.collection('events').create({ owner: aliceId, date: '2026-01-01', time: '', title: 'e' });
+const project = { id: newId(), title: 'rules-check' };
+const task = { id: newId(), text: 't', category: 'projects', projectId: project.id };
+const event = { id: newId(), date: '2026-01-01', time: '', title: 'e' };
+expectStatus(await alice('POST', '/projects', project), 201);
+expectStatus(await alice('POST', '/tasks', task), 201);
+expectStatus(await alice('POST', '/events', event), 201);
 
 console.log('owner');
-await check('owner sees own records', async () => {
-  const list = await alice.collection('tasks').getFullList({ filter: `id = "${task.id}"` });
-  assert(list.length === 1, 'task missing');
+await check('sees own records', async () => {
+  const d = (await alice('GET', '/data')).data;
+  if (d.tasks.length !== 1 || d.projects.length !== 1 || d.events.length !== 1) throw new Error(JSON.stringify(d));
 });
-await check('owner can update', () => alice.collection('tasks').update(task.id, { done: true }));
-await check('owner cannot hand record to someone else', () => mustFail(alice.collection('tasks').update(task.id, { owner: bobId })));
-await check('invalid date rejected', () => mustFail(alice.collection('events').create({ owner: aliceId, date: '1405/07/05', title: 'x' })));
+await check('can update', async () => expectStatus(await alice('PATCH', `/tasks/${task.id}`, { done: true }), 204));
+await check('invalid date rejected', async () => expectStatus(await alice('POST', '/events', { id: newId(), date: '1405/07/05', title: 'x' }), 400));
+await check('unknown fields cannot change ownership', async () => {
+  await alice('PATCH', `/tasks/${task.id}`, { owner: 'someone', owner_id: 'someone', text: 't2' });
+  const d = (await alice('GET', '/data')).data;
+  if (d.tasks[0].text !== 't2') throw new Error('task no longer visible to its owner');
+});
 
 console.log('other user');
-for (const col of ['projects', 'tasks', 'events']) {
-  await check(`cannot list ${col}`, async () => {
-    const list = await bob.collection(col).getFullList({ filter: `owner = "${aliceId}"` });
-    assert(list.length === 0, `saw ${list.length} records`);
-  });
-}
-await check('cannot view', () => mustFail(bob.collection('projects').getOne(project.id)));
-await check('cannot update', () => mustFail(bob.collection('tasks').update(task.id, { text: 'hacked' })));
-await check('cannot delete', () => mustFail(bob.collection('events').delete(event.id)));
-await check('cannot create as someone else', () => mustFail(bob.collection('tasks').create({ owner: aliceId, text: 'x', category: 'actions' })));
-await check("cannot attach task to another user's project", () =>
-  mustFail(bob.collection('tasks').create({ owner: bobId, text: 'x', category: 'projects', project: project.id })),
+await check('sees none of it', async () => {
+  const d = (await bob('GET', '/data')).data;
+  if (d.tasks.length + d.projects.length + d.events.length !== 0) throw new Error(JSON.stringify(d));
+});
+await check('cannot update', async () => expectStatus(await bob('PATCH', `/tasks/${task.id}`, { text: 'hacked' }), 404));
+await check('cannot rename project', async () => expectStatus(await bob('PATCH', `/projects/${project.id}`, { title: 'hacked' }), 404));
+await check('cannot delete', async () => expectStatus(await bob('DELETE', `/events/${event.id}`), 404));
+await check('cannot overwrite by reusing an id', async () => expectStatus(await bob('POST', '/tasks', { ...task, category: 'actions', projectId: null, text: 'mine' }), 409));
+await check("cannot attach task to another user's project", async () =>
+  expectStatus(await bob('POST', '/tasks', { id: newId(), text: 'x', category: 'projects', projectId: project.id }), 400),
 );
+await check('data untouched after attempts', async () => {
+  const d = (await alice('GET', '/data')).data;
+  if (d.tasks[0].text !== 't2' || d.projects[0].title !== 'rules-check' || d.events.length !== 1) throw new Error(JSON.stringify(d));
+});
 
 console.log('guest');
-await check('cannot list', async () => {
-  const list = await guest.collection('tasks').getFullList();
-  assert(list.length === 0, `saw ${list.length} records`);
-});
-await check('cannot create', () => mustFail(guest.collection('events').create({ owner: aliceId, date: '2026-01-01', title: 'x' })));
+await check('cannot read', async () => expectStatus(await guest('GET', '/data'), 401));
+await check('cannot write', async () => expectStatus(await guest('POST', '/events', { id: newId(), date: '2026-01-01', title: 'x' }), 401));
 
-console.log('cascade');
-await alice.collection('events').delete(event.id);
-await alice.collection('projects').delete(project.id);
-await check('deleting a project deletes its tasks', () => mustFail(alice.collection('tasks').getOne(task.id)));
+console.log('csrf');
+await check('cross-site request rejected', async () =>
+  expectStatus(await alice('POST', '/events', { id: newId(), date: '2026-01-01', title: 'x' }, { origin: 'https://evil.example' }), 403),
+);
+
+await check('non-JSON body rejected', async () => {
+  const res = await fetch(BASE + '/api/events', { method: 'POST', headers: { 'Content-Type': 'text/plain', Origin: BASE }, body: '{}' });
+  expectStatus({ status: res.status, data: null }, 415);
+});
+
+console.log('cascade & logout');
+await check('deleting a project deletes its tasks', async () => {
+  expectStatus(await alice('DELETE', `/projects/${project.id}`), 204);
+  const d = (await alice('GET', '/data')).data;
+  if (d.tasks.length !== 0) throw new Error(`${d.tasks.length} task(s) left`);
+});
+await check('logout ends the session', async () => {
+  expectStatus(await alice('POST', '/auth/logout'), 204);
+  expectStatus(await alice('GET', '/data'), 401);
+});
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
 process.exit(failures ? 1 : 0);

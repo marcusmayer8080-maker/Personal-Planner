@@ -13,10 +13,11 @@ const api = vi.hoisted(() => ({
   updateEvent: vi.fn(),
   deleteEvent: vi.fn(),
 }));
-vi.mock('../data/plannerApi', () => ({ plannerApi: api, subscribeAll: vi.fn(async () => () => {}) }));
-vi.mock('../lib/pb', () => ({ pb: { authStore: { record: { id: 'me' } } } }));
+vi.mock('../data/plannerApi', () => ({ plannerApi: api }));
 
 const { usePlanner } = await import('./plannerStore');
+const { useAuth } = await import('./authStore');
+useAuth.setState({ user: { id: 'me', email: 'me@example.test', name: 'Me' } });
 
 const offline = () => Promise.reject(Object.assign(new Error('offline'), { status: 0 }));
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -67,6 +68,14 @@ describe('plannerStore optimistic updates', () => {
     await flush();
     expect(usePlanner.getState().projects.map((p) => p.id)).toEqual(['p1']);
     expect(usePlanner.getState().tasks.map((t) => t.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('signs the user out when the session has expired', async () => {
+    api.updateTask.mockImplementationOnce(() => Promise.reject({ status: 401 }));
+    usePlanner.getState().updateTask('a', { done: true });
+    await flush();
+    expect(useAuth.getState().user).toBeNull();
+    useAuth.setState({ user: { id: 'me', email: 'me@example.test', name: 'Me' } });
   });
 
   it('ignores failures from a previous session after sign-out', async () => {

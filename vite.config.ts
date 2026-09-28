@@ -5,8 +5,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   base: '/',
   server: {
-    // backend/ holds the PocketBase binary and live SQLite files — not frontend sources.
-    watch: { ignored: ['**/backend/**'] },
+    // In development the API runs under `npm run dev:api` (Wrangler, emulating Cloudflare + D1).
+    // The Host header is kept so the API's CSRF origin check sees this dev origin.
+    proxy: { '/api': { target: 'http://127.0.0.1:8788', changeOrigin: false } },
+    watch: { ignored: ['**/.wrangler/**'] },
   },
   plugins: [
     react(),
@@ -34,8 +36,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,woff2}'],
-        // When PocketBase serves the app on the same origin, leave its admin UI and API alone.
-        navigateFallbackDenylist: [/^\/_\//, /^\/api\//],
+        // API requests must always reach the network, never the offline app shell.
+        navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],

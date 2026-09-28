@@ -1,20 +1,17 @@
 import { create } from 'zustand';
-import { plannerApi, subscribeAll, type RealtimeHandler } from '../data/plannerApi';
+import { plannerApi, type PlannerData } from '../data/plannerApi';
 import type { CalendarEvent, CategoryKey, Project, Task } from '../domain/types';
 import { uid } from '../lib/id';
-import { pb } from '../lib/pb';
+import { useAuth } from './authStore';
 
 // Server-backed planner data. Mutations are optimistic: the UI updates immediately and
 // the request runs in the background. If the server rejects it, that one change is rolled
-// back and an error is shown. Realtime events keep other tabs/devices in sync.
+// back and an error is shown. Changes from other devices arrive by re-fetching every
+// REFRESH_MS and whenever the tab regains focus.
+
+const REFRESH_MS = 30_000;
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
-
-interface PlannerData {
-  projects: Project[];
-  tasks: Task[];
-  events: CalendarEvent[];
-}
 
 interface PlannerState extends PlannerData {
   status: Status;
@@ -54,12 +51,15 @@ function errorMessage(err: unknown) {
   return 'تغییر ذخیره نشد. دوباره امتحان کن.';
 }
 
-const ownerId = () => pb.authStore.record!.id;
+const ownerId = () => useAuth.getState().user!.id;
 const now = () => new Date().toISOString();
 
-let unsubscribe: (() => void) | null = null;
-// Bumped on every start/stop so a slow, superseded start() can't install stale data or subscriptions.
+let stopRefreshing: (() => void) | null = null;
+// Bumped on every start/stop so a slow, superseded request can't install stale data.
 let session = 0;
+// Mutations still in flight. A background refresh is skipped while any are pending,
+// so a response fetched before a save can't make the optimistic change flicker away.
+let pending = 0;
 
 export const usePlanner = create<PlannerState>()((set, get) => {
   const list = <K extends Key>(key: K) => get()[key] as Item<K>[];
@@ -87,18 +87,41 @@ export const usePlanner = create<PlannerState>()((set, get) => {
   /** Run the server call; on failure undo the optimistic change and tell the user. */
   const sync = (request: () => Promise<unknown>, ...undo: (() => void)[]) => {
     const mine = session;
-    request().catch((err) => {
-      if (mine !== session) return;
-      console.error(err);
-      undo.reverse().forEach((u) => u());
-      set({ error: errorMessage(err) });
-    });
+    pending++;
+    request()
+      .catch((err) => {
+        if (mine !== session) return;
+        console.error(err);
+        undo.reverse().forEach((u) => u());
+        if (err?.status === 401) useAuth.getState().sessionExpired();
+        else set({ error: errorMessage(err) });
+      })
+      .finally(() => pending--);
   };
 
-  const realtime =
-    <K extends Key>(key: K): RealtimeHandler<Item<K>> =>
-    (action, item) =>
-      put(key, action === 'delete' ? list(key).filter((x) => x.id !== item.id) : upsert(list(key), item));
+  /** Quietly re-fetch everything; failures are ignored (the next tick retries). */
+  const refresh = async () => {
+    const mine = session;
+    if (pending > 0 || get().status !== 'ready') return;
+    try {
+      const data = await plannerApi.fetchAll();
+      if (mine === session && pending === 0) set(data);
+    } catch (err) {
+      if (mine === session && (err as { status?: number })?.status === 401) useAuth.getState().sessionExpired();
+    }
+  };
+
+  function startRefreshing() {
+    const onVisible = () => document.visibilityState === 'visible' && void refresh();
+    const timer = setInterval(() => document.visibilityState === 'visible' && void refresh(), REFRESH_MS);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }
 
   return {
     ...EMPTY,
@@ -113,24 +136,19 @@ export const usePlanner = create<PlannerState>()((set, get) => {
         const data = await plannerApi.fetchAll();
         if (mine !== session) return;
         set({ ...data, status: 'ready' });
-        const unsub = await subscribeAll({
-          projects: realtime('projects'),
-          tasks: realtime('tasks'),
-          events: realtime('events'),
-        });
-        if (mine !== session) return unsub();
-        unsubscribe = unsub;
+        stopRefreshing = startRefreshing();
       } catch (err) {
         if (mine !== session) return;
         console.error(err);
+        if ((err as { status?: number })?.status === 401) return useAuth.getState().sessionExpired();
         // The load-error state in <App> explains this; the banner is for failed edits.
         set({ status: 'error' });
       }
     },
     stop: () => {
       session++;
-      unsubscribe?.();
-      unsubscribe = null;
+      stopRefreshing?.();
+      stopRefreshing = null;
       set({ ...EMPTY, status: 'idle', error: null });
     },
     dismissError: () => set({ error: null }),

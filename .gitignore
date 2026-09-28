@@ -4,6 +4,5 @@ dev-dist
 *.log
 .DS_Store
 
-# PocketBase: binary and local data stay out of git; migrations are committed.
-backend/*
-!backend/pb_migrations/
+# Wrangler local state (local D1 database, logs)
+.wrangler/

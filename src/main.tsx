@@ -12,11 +12,14 @@ import { useAuth } from './store/authStore';
 
 function Root() {
   const user = useAuth((s) => s.user);
+  const checking = useAuth((s) => s.checking);
   useEffect(() => {
     void useAuth.getState().refresh();
   }, []);
-  // Keyed by user so switching accounts always starts from a clean slate.
-  return user ? <App key={user.id} /> : <AuthScreen />;
+
+  if (user) return <App key={user.id} />; // keyed so switching accounts starts clean
+  if (checking) return <div className="empty-note">در حال بارگذاری…</div>;
+  return <AuthScreen />;
 }
 
 createRoot(document.getElementById('root')!).render(

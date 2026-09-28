@@ -1,23 +1,21 @@
 import { useState, type FormEvent } from 'react';
+import { HttpError } from '../../lib/http';
 import { useAuth } from '../../store/authStore';
 
 type Mode = 'signin' | 'signup';
 
-interface PbError {
-  status?: number;
-  response?: { data?: Record<string, { code?: string }> };
-}
+const MESSAGES: Record<string, string> = {
+  email_taken: 'با این ایمیل قبلاً حساب ساخته شده. وارد شو.',
+  invalid_email: 'ایمیل معتبر نیست.',
+  weak_password: 'رمز عبور باید حداقل ۸ کاراکتر باشه.',
+  invalid_credentials: 'ایمیل یا رمز عبور اشتباهه.',
+  rate_limited: 'تعداد تلاش‌ها زیاد بود. چند دقیقه بعد دوباره امتحان کن.',
+};
 
-function authErrorMessage(err: unknown, mode: Mode) {
-  const e = err as PbError;
-  if (e.status === 0) return 'ارتباط با سرور برقرار نشد. اتصال اینترنت رو بررسی کن.';
-  const data = e.response?.data ?? {};
-  if (data.email?.code === 'validation_not_unique') return 'با این ایمیل قبلاً حساب ساخته شده. وارد شو.';
-  if (data.email) return 'ایمیل معتبر نیست.';
-  if (data.password) return 'رمز عبور باید حداقل ۸ کاراکتر باشه.';
-  if (mode === 'signin' && e.status === 400) return 'ایمیل یا رمز عبور اشتباهه.';
-  if (e.status === 429) return 'تعداد تلاش‌ها زیاد بود. چند دقیقه بعد دوباره امتحان کن.';
-  return 'مشکلی پیش اومد. دوباره امتحان کن.';
+function authErrorMessage(err: unknown) {
+  if (!(err instanceof HttpError)) return 'مشکلی پیش اومد. دوباره امتحان کن.';
+  if (err.status === 0) return 'ارتباط با سرور برقرار نشد. اتصال اینترنت رو بررسی کن.';
+  return (err.code && MESSAGES[err.code]) || 'مشکلی پیش اومد. دوباره امتحان کن.';
 }
 
 export function AuthScreen() {
@@ -37,7 +35,7 @@ export function AuthScreen() {
       if (mode === 'signin') await signIn(email.trim(), password);
       else await signUp(name.trim(), email.trim(), password);
     } catch (err) {
-      setError(authErrorMessage(err, mode));
+      setError(authErrorMessage(err));
       setBusy(false);
     }
   };
