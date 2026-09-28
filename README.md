@@ -1,9 +1,9 @@
-﻿# ط§ظ‚ط¯ط§ظ…ط§طھ ظ…ط§ظ†ط¯ظ‡ â€” My Planner
+# اقدامات مانده — My Planner
 
 Persian (RTL, Jalaali calendar) multi-user planner PWA, hosted on Cloudflare.
 
 - **Frontend:** React + TypeScript + Vite, served by Cloudflare Pages.
-- **API:** Hono on Cloudflare Pages Functions (`functions/` â†’ `server/`), same origin at `/api`.
+- **API:** Hono on Cloudflare Pages Functions (`functions/` → `server/`), same origin at `/api`.
 - **Database:** Cloudflare D1 (SQLite), schema in `migrations/`.
 - **Auth:** email + password (PBKDF2), session in an HttpOnly `__Host-` cookie.
 
@@ -29,14 +29,14 @@ npm run typecheck
 
 ```text
 migrations/     D1 schema (append-only; `wrangler d1 migrations`)
-functions/      Pages Functions entry â€” routes /api/* to server/app.ts
+functions/      Pages Functions entry — routes /api/* to server/app.ts
 server/         API: auth.ts (sign-up/in, sessions, rate limits), planner.ts (data), crypto.ts
 scripts/        check-rules.mjs
 src/
-  lib/          pure helpers â€” Jalaali dates, ids, fetch client
+  lib/          pure helpers — Jalaali dates, ids, fetch client
   domain/       types, categories, agenda logic (shared with server)
-  data/         plannerApi â€” client for the /api endpoints
-  store/        authStore آ· plannerStore (optimistic, periodic refresh) آ· uiStore
+  data/         plannerApi — client for the /api endpoints
+  store/        authStore · plannerStore (optimistic, periodic refresh) · uiStore
   components/   shared UI
   features/     auth screen + one folder per tab
 ```
